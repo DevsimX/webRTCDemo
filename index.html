@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Webrtc聊天室</title>
+    <link rel="stylesheet" type="text/css" href="/dist/css/index.css">
+    <link rel="stylesheet" type="text/css" href="/dist/css/main.css">
+</head>
+<body>
+<div class="container">
+    <div id="chat">
+        <div class="msgs" id="msgs"></div>
+        <input type="file" id="fileIpt" class="fileIpt">
+        <button id="sendFileBtn" class="sendFileBtn">发送文件</button>
+        <input type="text" id="msgIpt" class="msgIpt" title="消息">
+        <button id="sendBtn" class="sendBtn">发送</button>
+    </div>
+    <div id="connect_section">
+        <label for="room_id">房间号: </label>
+        <input type="text" id="room_id" class="room_id_input" >
+        <label for="client_name">名字: </label>
+        <input type="text" id="client_name" class="name_input" >
+        <button id="connectButton" class="connectButton">连接房间</button>
+        <button id="disconnectButton" class="disconnectButton" disabled>离开房间</button>
+        <button id="changeAudioMutedButton" class="connectButton" disabled>打开麦克风</button>
+        <button id="changeVideoMutedButton" class="connectButton" disabled>打开摄像头</button>
+        <div>
+            <input id="shareDesk" type="checkbox" disabled/><label for="shareDesk">共享桌面</label>
+        </div>
+
+        <!--  未完成的功能-->
+<!--        <button id="recordVideoButton" class="connectButton" disabled>开始视频录制</button>-->
+<!--        <button id="stopRecordVideoButton" class="connectButton" disabled>停止视频录制</button>-->
+<!--        <button id="downloadRecordVideoButton" class="connectButton" disabled>下载录制的视频</button>-->
+
+<!--        <button id="initialCanvasButton" class="connectButton" disabled>初始化白板</button>-->
+<!--        <button id="closeCanvasButton" class="connectButton" disabled>移除白板</button>-->
+
+<!--        <div class="colors">-->
+<!--            <div class="color black"></div>-->
+<!--            <div class="color red"></div>-->
+<!--            <div class="color green"></div>-->
+<!--            <div class="color blue"></div>-->
+<!--            <div class="color yellow"></div>-->
+<!--        </div>-->
+<!--        <canvas class="whiteboard" ></canvas>-->
+
+
+    </div>
+    <div id="videos">
+        <video id="me" autoplay></video>
+    </div>
+    <div id="files">
+    </div>
+</div>
+
+
+<script type="text/javascript" src="/dist/js/SkyRTC-client.js"></script>
+<script type="text/javascript" src="/dist/js/conn.js"></script>
+</body>
+</html>
