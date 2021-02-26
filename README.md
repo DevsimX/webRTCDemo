@@ -39,12 +39,3 @@ node server.js
 # Server running at http://0.0.0.0:3000/
 
 ```
-
-
-## QQ
-
-QQ Group Name ：webrtc技术交流群
-
-QQ Group ：601332720
-
-加入群一起探讨webrtc，分享好的开源项目
