@@ -17,8 +17,9 @@ let errorCb = function (rtc) {
 
 //************************************//
 //client对象，用于构建用户对象的构造函数，参数为socket对象和string字符
-function WebRtcClient(socket,name){
+function WebRtcClient(socket,username,name){
     this.socket = socket;
+    this.username = username;
     this.name = name;
     this.id = socket.id;
     this.room_id = null;
@@ -88,11 +89,13 @@ function SkyRTC() {
     this.clientList = [];
     this.roomList = [];
 
+    this.remoteControlList = [];//远程连接的list,格式是{controller:client,controlled:client,state:connecting/connected,track}
+
 
     // 加入房间
     this.on('__join', function (data, socket) {
         //检查用户名是否已经存在于服务器当中
-        if(!this.checkClientName(data.name)){
+        if(!this.checkClientName(data.username)){
             socket.send(JSON.stringify({
                 "eventName": "_repeatedName"
             }), errorCb);
@@ -100,11 +103,11 @@ function SkyRTC() {
         }
 
         //创建webrtc用户并将它添加到服务器的clientList列表当中
-        const newWebRtcClient = new WebRtcClient(socket, data.name);
+        const newWebRtcClient = new WebRtcClient(socket, data.username,data.name);
         this.clientList.push(newWebRtcClient);
 
         //获得用户想进入的房间，新建或者获取已经存在的某个房间
-        let ids = [],clientRoom = this.createOrChooseARoom(data.room_id);
+        let ids = [],names={},usernames={},clientRoom = this.createOrChooseARoom(data.room_id);
 
         //将创建的webrtc对象添加到对应的房间中，如果添加错误报错
         if(!clientRoom.addClient(newWebRtcClient)){
@@ -120,11 +123,14 @@ function SkyRTC() {
             if(client.id === newWebRtcClient.id)
                 continue;
             ids.push(client.id);
+            names[client.id]=client.name;
+            usernames[client.id] = client.username;
             client.socket.send(JSON.stringify({
                         "eventName": "_new_peer",
                         "data": {
                             "socketId": newWebRtcClient.socket.id,
-                            "name": newWebRtcClient.name
+                            "name": newWebRtcClient.name,
+                            "username": newWebRtcClient.username,
                         }
                     }), errorCb);
         }
@@ -134,6 +140,8 @@ function SkyRTC() {
                 "eventName": "_peers",
                 "data": {
                     "connections": ids,
+                    "names": names,
+                    "usernames": usernames,
                     "you": socket.id
                 }
             }), errorCb);
@@ -225,6 +233,80 @@ function SkyRTC() {
         }
     });
 
+    this.on('__remoteControlAsk', function (data, socket) {
+        let controller = this.getClientByUsername(data.controller);
+        let controlled = this.getClientByUsername(data.controlled);
+
+        if(controller && controlled){
+            if(this.checkRemoteControl(data.controlled)){
+                this.remoteControlList.push({controller: controller,controlled: controlled,state: 'ask',track: null});
+                controlled.socket.send(JSON.stringify({
+                    "eventName": "_receiveRemoteControlAsk",
+                    "data": {
+                        "name": controller.name,
+                        "username": controller.username,
+                    }
+                }), errorCb);
+            }else {
+                controller.socket.send(JSON.stringify({
+                    "eventName": "_remoteControlFail",
+                    "data": {
+                        "name": controlled.name,
+                        "error": "目标用户正在连接中或已经和他人建立了连接",
+                    }
+                }), errorCb);
+            }
+        }
+    });
+
+    this.on('__remoteControlRespond', function (data, socket) {
+        let controller = this.getClientByUsername(data.controller);
+        let controlled = this.getClientByUsername(data.controlled);
+
+        if(controller && controlled){
+            if(data.state === "accept"){
+                let remote = this.getRemoteControlByAll(data.controller,data.controlled);
+                remote['track'] = data.track;
+                remote['state'] = "connected";
+
+                controller.socket.send(JSON.stringify({
+                    "eventName": "_remoteControlSuccess",
+                    "data": {
+                        "name": controlled.name,
+                        "track": data.track,
+                    }
+                }), errorCb);
+            }else if(data.state === "refuse"){
+                controller.socket.send(JSON.stringify({
+                    "eventName": "_remoteControlFail",
+                    "data": {
+                        "name": controlled.name,
+                        "error": data.info,
+                    }
+                }), errorCb);
+            }
+            // if(this.checkRemoteControl(data.controlled)){
+            //     this.remoteControlList.push({controller: controller,controlled: controlled,state: 'ask'});
+            //     controlled.socket.send(JSON.stringify({
+            //         "eventName": "_receiveRemoteControlAsk",
+            //         "data": {
+            //             "name": controller.name,
+            //             "username": controller.username,
+            //         }
+            //     }), errorCb);
+            // }else {
+            //     controller.socket.send(JSON.stringify({
+            //         "eventName": "_waitRemoteControl",
+            //         "data": {
+            //             "name": controlled.name
+            //         }
+            //     }), errorCb);
+            // }
+        }
+    });
+
+
+
     // 发起邀请
     this.on('__invite', function (data) {
 
@@ -238,9 +320,9 @@ function SkyRTC() {
 util.inherits(SkyRTC, events.EventEmitter);
 
 //检查新加入的用户的用户名是否已经存在，true为不存在
-SkyRTC.prototype.checkClientName = function (name){
+SkyRTC.prototype.checkClientName = function (username){
     for(let client of this.clientList){
-        if(name === client.name){
+        if(username === client.username){
             return false;
         }
     }
@@ -312,6 +394,35 @@ SkyRTC.prototype.getClient = function (socket_id) {
     for(let client of this.clientList){
         if(client.id === socket_id)
             return client;
+    }
+    return null;
+};
+
+//根据username获得指定的用户
+SkyRTC.prototype.getClientByUsername = function (username) {
+    for(let client of this.clientList){
+        if(client.username === username)
+            return client;
+    }
+    return null;
+};
+
+//异步检查是否一个用户只能被一个用户远程控制
+SkyRTC.prototype.checkRemoteControl = function (username) {
+    for(let remote of this.remoteControlList){
+        if(remote.controlled.username === username){
+            return false;
+        }
+    }
+    return true;
+};
+
+//异步检查是否一个用户只能被一个用户远程控制
+SkyRTC.prototype.getRemoteControlByAll = function (controller,controlled) {
+    for(let remote of this.remoteControlList){
+        if(remote['controller'].username === controller && remote['controlled'].username === controlled){
+            return remote;
+        }
     }
     return null;
 };

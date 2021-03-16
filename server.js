@@ -1,23 +1,93 @@
-const express = require('express');
+var koa = require('koa')
+var bodyParser = require('koa-bodyparser');
+// 注意require('koa-router')返回的是函数:
+var router = require('koa-router')()
+var cors = require('koa2-cors') //跨域中间件
+var app = new koa()
+// const express = require('express');
 var fs = require('fs');
-const app = express();
+// const app = express();
 var options = {
     key  : fs.readFileSync('./cert/2_xytcloud.ltd.key'),
     cert : fs.readFileSync('./cert/1_xytcloud.ltd_bundle.crt')
 }
-const server = require('https').createServer(options,app);
+const server = require('https').createServer(options);
 const path = require("path");
 const SkyRTC = require('./public/dist/js/SkyRTC.js').listen(server,"/xyt");
 
-app.use(express.static(path.join(__dirname, 'public')), null);
+// app.use(express.static(path.join(__dirname, 'public')), null);
 
 
 server.listen(4433, '0.0.0.0');
 
+//设置允许跨域访问该服务.
+app.use(cors());
 
-app.get('/', function (req, res) {
-    res.sendfile(__dirname + '/index.html');
+app.use(bodyParser());
+
+// log request URL:
+app.use(async (ctx, next) => {
+    console.log(`Process ${ctx.request.method} ${ctx.request.url}...`);
+    await next();
 });
+
+// add url-route:
+router.get('/hello/:name', async (ctx, next) => {
+    var name = ctx.params.name;
+    ctx.response.body = `<h1>Hello, ${name}!</h1>`;
+});
+
+router.get('/', async (ctx, next) => {
+    ctx.response.body = '<h1>Index</h1>';
+});
+
+router.post('/remoteControl',async (ctx,next) => {
+    let controller = ctx.request.body['controller'];
+    let controlled = ctx.request.body['controlled'];
+
+    if(controller && controlled){
+        for(let i of SkyRTC.rtc.remoteControlList){
+            if(i['controlled'].username === controlled && i['controller'].username === controller){
+                if(i['track']){
+                    ctx.response.status = 200;
+                    ctx.response.message = 'ok'
+                }else {
+                    ctx.response.status = 404;
+                    ctx.response.message = 'track not found'
+                }
+                return;
+            }
+        }
+    }
+    ctx.response.status = 404;
+})
+
+router.post('/remoteControlGetTrack',async (ctx,next) => {
+    let controller = ctx.request.body['controller'];
+    let controlled = ctx.request.body['controlled'];
+
+    if(controller && controlled){
+        for(let i of SkyRTC.rtc.remoteControlList){
+            if(i['controlled'].username === controlled && i['controller'].username === controller){
+                if(i['track']){
+                    ctx.response.status = 200;
+                    ctx.response.body = i['track'];
+                    ctx.response.message = 'ok'
+                }else {
+                    ctx.response.status = 404;
+                    ctx.response.message = 'track not found'
+                }
+                return;
+            }
+        }
+    }
+    ctx.response.status = 404;
+})
+
+// add router middleware:
+app.use(router.routes());
+
+require('https').createServer(options,app.callback()).listen(8001);
 
 SkyRTC.rtc.on('new_connect', function (socket) {
     console.log('创建新连接');

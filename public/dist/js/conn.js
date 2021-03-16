@@ -10,7 +10,13 @@ var change_video_muted_button = document.getElementById("changeVideoMutedButton"
 var change_audio_muted_button = document.getElementById("changeAudioMutedButton")
 let shareDesktop = document.getElementById("shareDesk");
 var files = document.getElementById("files");
+var robot = document.getElementById("robot")
+var robot1 = require("robotjs");
 var rtc = SkyRTC();
+
+robot.onclick = function (){
+    robot1.moveMouse(100,100)
+}
 
 //如果返回的是false说明当前操作系统是手机端，如果返回的是true则说明当前的操作系统是电脑端
 function IsPC() {

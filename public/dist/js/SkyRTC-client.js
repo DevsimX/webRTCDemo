@@ -205,7 +205,7 @@ const SkyRTC = function () {
         socket.onclose = function (data) {
             that.closeStream(that.localMediaStream);
             var pcs = that.peerConnections;
-            for (i = pcs.length; i--;) {
+            for (let i = pcs.length; i>=0;i--) {
                 that.closePeerConnection(pcs[i]);
             }
             that.peerConnections = [];
