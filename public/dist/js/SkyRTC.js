@@ -190,18 +190,31 @@ function SkyRTC() {
         var soc = this.getSocket(data.socketId);
 
         if (soc) {
-            soc.send(JSON.stringify({
-                "eventName": "_ice_candidate",
-                "data": {
-                    "id": data.id,
-                    "label": data.label,
-                    "sdpMLineIndex" :data.label,
-                    "candidate": data.candidate,
-                    "socketId": socket.id
-                }
-            }), errorCb);
+            if(data.role === 'normal'){
+                soc.send(JSON.stringify({
+                    "eventName": "_ice_candidate",
+                    "data": {
+                        "id": data.id,
+                        "label": data.label,
+                        "sdpMLineIndex" :data.label,
+                        "candidate": data.candidate,
+                        "socketId": socket.id
+                    }
+                }), errorCb);
 
-            this.emit('ice_candidate', socket, data);
+                this.emit('ice_candidate', socket, data);
+            }else if(data.role === 'remote'){
+                soc.send(JSON.stringify({
+                    "eventName": "_remote_ice_candidate",
+                    "data": {
+                        "id": data.id,
+                        "label": data.label,
+                        "sdpMLineIndex" :data.label,
+                        "candidate": data.candidate,
+                        "socketId": socket.id
+                    }
+                }), errorCb);
+            }
         }
     });
 
@@ -213,7 +226,8 @@ function SkyRTC() {
                 "eventName": "_offer",
                 "data": {
                     "sdp": data.sdp,
-                    "socketId": socket.id
+                    "socketId": socket.id,
+                    "role": data.role,
                 }
             }), errorCb);
         }
@@ -227,7 +241,8 @@ function SkyRTC() {
                 "eventName": "_answer",
                 "data": {
                     "sdp": data.sdp,
-                    "socketId": socket.id
+                    "socketId": socket.id,
+                    "role": data.role,
                 }
             }), errorCb);
             this.emit('answer', socket, data);
