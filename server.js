@@ -1,12 +1,9 @@
 var koa = require('koa')
 var bodyParser = require('koa-bodyparser');
-// 注意require('koa-router')返回的是函数:
 var router = require('koa-router')()
 var cors = require('koa2-cors') //跨域中间件
 var app = new koa()
-// const express = require('express');
 var fs = require('fs');
-// const app = express();
 var options = {
     key  : fs.readFileSync('./cert/2_xytcloud.ltd.key'),
     cert : fs.readFileSync('./cert/1_xytcloud.ltd_bundle.crt')
@@ -15,7 +12,6 @@ const server = require('https').createServer(options);
 const path = require("path");
 const SkyRTC = require('./public/dist/js/SkyRTC.js').listen(server,"/xyt");
 
-// app.use(express.static(path.join(__dirname, 'public')), null);
 
 
 server.listen(4433, '0.0.0.0');
@@ -84,6 +80,27 @@ router.post('/remoteControlGetTrack',async (ctx,next) => {
     ctx.response.status = 404;
 })
 
+router.get('/testConnect',async (ctx,next) => {
+    ctx.response.status = 200;
+    ctx.response.message = 'ok'
+    ctx.response.ok = true;
+})
+
+router.get('/testUsernameDuplicated',async (ctx,next) => {
+    let username = ctx.query.username;
+    let clientList = SkyRTC.rtc.clientList;
+    for(let i of clientList){
+        if(i.username === username){
+            ctx.response.status = 200;
+            ctx.response.message = 'username duplicated'
+            ctx.response.ok = true;
+            return;
+        }
+    }
+    ctx.response.status = 200;
+    ctx.response.message = 'ok'
+    ctx.response.ok = true;
+})
 // add router middleware:
 app.use(router.routes());
 

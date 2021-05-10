@@ -143,7 +143,7 @@ function SkyRTC() {
                 "eventName": "_peers",
                 "data": {
                     "clientsInfo": clientsInfo,
-                    "you": socket.id
+                    "socketId": socket.id
                 }
             }), errorCb);
 
@@ -190,31 +190,17 @@ function SkyRTC() {
         var soc = this.getSocket(data.socketId);
 
         if (soc) {
-            if(data.role === 'normal'){
-                soc.send(JSON.stringify({
-                    "eventName": "_ice_candidate",
-                    "data": {
-                        "id": data.id,
-                        "label": data.label,
-                        "sdpMLineIndex" :data.label,
-                        "candidate": data.candidate,
-                        "socketId": socket.id
-                    }
-                }), errorCb);
-
-                this.emit('ice_candidate', socket, data);
-            }else if(data.role === 'remote'){
-                soc.send(JSON.stringify({
-                    "eventName": "_remote_ice_candidate",
-                    "data": {
-                        "id": data.id,
-                        "label": data.label,
-                        "sdpMLineIndex" :data.label,
-                        "candidate": data.candidate,
-                        "socketId": socket.id
-                    }
-                }), errorCb);
-            }
+            soc.send(JSON.stringify({
+                "eventName": "_ice_candidate",
+                "data": {
+                    "id": data.id,
+                    "label": data.label,
+                    "sdpMLineIndex" :data.label,
+                    "candidate": data.candidate,
+                    "socketId": socket.id
+                }
+            }), errorCb);
+            this.emit('ice_candidate', socket, data);
         }
     });
 
@@ -227,7 +213,6 @@ function SkyRTC() {
                 "data": {
                     "sdp": data.sdp,
                     "socketId": socket.id,
-                    "role": data.role,
                 }
             }), errorCb);
         }
@@ -242,7 +227,6 @@ function SkyRTC() {
                 "data": {
                     "sdp": data.sdp,
                     "socketId": socket.id,
-                    "role": data.role,
                 }
             }), errorCb);
             this.emit('answer', socket, data);
